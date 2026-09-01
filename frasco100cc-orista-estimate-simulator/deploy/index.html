@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>オリスタ見積りシミュレーター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=BIZ+UDGothic:wght@400;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    /* ==========================================================
+       オリスタ見積りシミュレーター — 「印刷伝票」を思わせるレジャー型UI
+       常時ライトテーマ（白背景）固定。OSのダークモード設定に関わらず白背景を維持する。
+       ========================================================== */
+    :root {
+        --bg: #ffffff;
+        --surface: #ffffff;
+        --surface-muted: #f4f6f9;
+        --border: #dbe2ea;
+        --border-strong: #b9c4d1;
+        --text-primary: #101828;
+        --text-secondary: #5b6472;
+        --text-tertiary: #8b94a3;
+
+        --accent: #2454c9;
+        --accent-hover: #1c3fa0;
+        --accent-soft: #eaf1fd;
+        --accent-soft-border: #bfd4f7;
+
+        --success: #157f4b;
+        --success-soft: #e9f7ef;
+        --success-soft-border: #a9dfc0;
+
+        --danger: #c22a2a;
+        --danger-soft: #fdeeee;
+        --danger-soft-border: #f2b9b9;
+
+        --warning: #b4650d;
+        --warning-soft: #fdf3e6;
+        --warning-soft-border: #f0cd9c;
+
+        --font-display: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+        --font-body: 'BIZ UDGothic', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+        --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+        --radius-sm: 0.4rem;
+        --radius-md: 0.6rem;
+        --radius-lg: 0.9rem;
+        --shadow-card: 0 1px 2px rgba(16,24,40,0.04), 0 4px 14px rgba(16,24,40,0.05);
+        --shadow-pop: 0 8px 24px rgba(16,24,40,0.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        font-family: var(--font-body);
+        background: var(--bg);
+        color: var(--text-primary);
+        margin: 0;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, .display { font-family: var(--font-display); text-wrap: balance; }
+    .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+    .page-wrap { max-width: 1440px; margin: 0 auto; padding: 1.75rem 2rem 3rem; }
+
+    /* ---- ヘッダー ---- */
+    .app-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        border-bottom: 2px solid var(--text-primary);
+        padding-bottom: 1rem;
+        margin-bottom: 1.75rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .app-eyebrow {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--accent);
+        text-transform: uppercase;
+        margin: 0 0 0.3rem;
+    }
+    .app-title { font-size: 1.7rem; font-weight: 900; margin: 0; letter-spacing: -0.01em; }
+    .app-date { font-size: 0.8rem; color: var(--text-secondary); }
+
+    /* ---- レイアウト ---- */
+    .layout { display: grid; grid-template-columns: 300px 1fr 340px; gap: 1.5rem; align-items: start; }
+    @media (max-width: 1180px) {
+        .layout { grid-template-columns: 1fr; }
+    }
+    .col { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+
+    /* ---- カード ---- */
+    .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        padding: 1.4rem;
+    }
+    .card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.85rem;
+        margin-bottom: 1.1rem;
+    }
+    .card-title { font-size: 1rem; font-weight: 700; margin: 0; }
+    .card-sub { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text-tertiary); text-transform: uppercase; }
+
+    .field { display: flex; flex-direction: column; gap: 0.45rem; }
+    .field + .field { margin-top: 1.15rem; }
+    .field-label-row { display: flex; justify-content: space-between; align-items: baseline; }
+    .field-label { font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); }
+    .field-unit { font-size: 0.7rem; color: var(--text-tertiary); }
+    .field-hint { font-size: 0.72rem; color: var(--text-tertiary); line-height: 1.5; }
+
+    /* ---- 数値入力 + ステッパー ---- */
+    .stepper { display: grid; grid-template-columns: 44px 1fr 44px; gap: 0.5rem; }
+    .stepper input[type="number"] {
+        appearance: none;
+        -moz-appearance: textfield;
+        width: 100%;
+        min-height: 44px;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 1.1rem;
+        font-weight: 600;
+        text-align: center;
+        color: var(--text-primary);
+        background: var(--surface-muted);
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 0.4rem;
+    }
+    .stepper input[type="number"]::-webkit-outer-spin-button,
+    .stepper input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .stepper input.accent { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-soft-border); }
+    .stepper input:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 1px; }
+    .stepper input.field-invalid { border-color: var(--danger); }
+
+    .stepper-btn {
+        min-height: 44px;
+        min-width: 44px;
+        border-radius: var(--radius-md);
+        border: 1.5px solid var(--border-strong);
+        background: var(--surface);
+        color: var(--text-primary);
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
+    }
+    .stepper-btn:hover { background: var(--surface-muted); border-color: var(--accent); color: var(--accent); }
+    .stepper-btn:active { transform: scale(0.94); }
+    .stepper-btn:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+
+    /* ---- セグメントボタン(選択肢グループ) ---- */
+    .seg-group { display: grid; gap: 0.5rem; }
+    .seg-group[data-cols="2"] { grid-template-columns: repeat(2, 1fr); }
+    .seg-group[data-cols="3"] { grid-template-columns: repeat(3, 1fr); }
+    .seg-group[data-cols="5"] { grid-template-columns: repeat(5, 1fr); }
+    @media (max-width: 1180px) {
+        .seg-group[data-cols="5"] { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .seg-btn {
+        min-height: 46px;
+        border-radius: var(--radius-md);
+        border: 1.5px solid var(--border-strong);
+        background: var(--surface);
+        color: var(--text-primary);
+        font-family: var(--font-body);
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 0.5rem 0.4rem;
+        cursor: pointer;
+        line-height: 1.25;
+        transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.05s ease;
+    }
+    .seg-btn .seg-price { display: block; font-size: 0.68rem; font-weight: 500; opacity: 0.75; margin-top: 0.1rem; font-family: var(--font-mono); }
+    .seg-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .seg-btn:active { transform: scale(0.97); }
+    .seg-btn:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+    .seg-btn.seg-active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(36,84,201,0.28);
+    }
+    .seg-btn.seg-active .seg-price { opacity: 0.9; }
+
+    /* ---- トグルチップ(オプションON/OFF) ---- */
+    .chip-row { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+    .chip-btn {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        border: 1.5px solid var(--border-strong);
+        background: var(--surface);
+        color: var(--text-primary);
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    }
+    .chip-btn:hover { border-color: var(--accent); }
+    .chip-btn:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+    .chip-dot { width: 0.55rem; height: 0.55rem; border-radius: 999px; background: var(--border-strong); flex-shrink: 0; transition: background 0.12s ease; }
+    .chip-btn.chip-active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-hover); }
+    .chip-btn.chip-active .chip-dot { background: var(--accent); }
+
+    /* ---- 処理カード(シルク/DTF)のヘッダー・トグルスイッチ ---- */
+    .process-card { border: 2px solid var(--border); transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease; }
+    .process-card.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .process-card.warn { border-color: var(--warning) !important; box-shadow: 0 0 0 3px var(--warning-soft) !important; }
+
+    .process-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        cursor: pointer;
+        user-select: none;
+        padding: 0.25rem 0.25rem 1rem;
+        margin: -0.25rem -0.25rem 1.1rem;
+        border-bottom: 1px solid var(--border);
+    }
+    .process-toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .process-name { font-size: 1.15rem; font-weight: 900; }
+    .process-name-sub { display: block; font-size: 0.72rem; font-weight: 500; color: var(--text-tertiary); margin-top: 0.1rem; }
+
+    .switch-track {
+        flex-shrink: 0;
+        width: 60px;
+        height: 34px;
+        border-radius: 999px;
+        background: var(--surface-muted);
+        border: 1.5px solid var(--border-strong);
+        position: relative;
+        transition: background 0.18s ease, border-color 0.18s ease;
+    }
+    .switch-thumb {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        background: #ffffff;
+        box-shadow: 0 1px 3px rgba(16,24,40,0.35);
+        transition: transform 0.18s cubic-bezier(0.4,0,0.2,1);
+    }
+    input:checked + .switch-track { background: var(--accent); border-color: var(--accent); }
+    input:checked + .switch-track .switch-thumb { transform: translateX(26px); }
+    .process-toggle:focus-within .switch-track { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+
+    .content-area { transition: opacity 0.2s ease, filter 0.2s ease; }
+    .process-card.inactive .content-area { opacity: 0.4; filter: grayscale(0.4); pointer-events: none; }
+
+    .loc-box { background: var(--surface-muted); border: 1px solid var(--border); padding: 0.9rem; border-radius: var(--radius-md); }
+    .loc-box + .loc-box { margin-top: 0.85rem; }
+
+    .warn-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-top: 0.85rem;
+        padding: 0.7rem 0.85rem;
+        background: var(--warning-soft);
+        border: 1px solid var(--warning-soft-border);
+        border-radius: var(--radius-md);
+        color: var(--warning);
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1.5;
+    }
+    .warn-note.hidden { display: none; }
+    .warn-badge {
+        flex-shrink: 0;
+        width: 1.2rem;
+        height: 1.2rem;
+        border-radius: 999px;
+        background: var(--warning);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 900;
+    }
+
+    /* ---- 結果レジャー(右カラム) ---- */
+    .ledger { position: sticky; top: 1.5rem; overflow: hidden; }
+    .ledger-head { background: var(--text-primary); color: #fff; padding: 1.1rem 1.4rem; }
+    .ledger-head .card-sub { color: rgba(255,255,255,0.55); }
+    .ledger-head .card-title { color: #fff; font-size: 1.05rem; }
+    .ledger-body { padding: 1.3rem; }
+
+    .ledger-block { border-radius: var(--radius-md); padding: 1.05rem 1.1rem; margin-bottom: 0.9rem; border: 1px solid; }
+    .ledger-block.sale { background: var(--accent-soft); border-color: var(--accent-soft-border); }
+    .ledger-block.cost { background: var(--danger-soft); border-color: var(--danger-soft-border); }
+    .ledger-block.profit { background: var(--success-soft); border-color: var(--success-soft-border); }
+    .ledger-block.profit.negative { background: var(--danger-soft); border-color: var(--danger-soft-border); }
+
+    .ledger-label { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; opacity: 0.85; display: block; margin-bottom: 0.35rem; }
+    .sale .ledger-label, .sale .ledger-total { color: var(--accent-hover); }
+    .cost .ledger-label, .cost .ledger-total { color: var(--danger); }
+    .profit .ledger-label, .profit .ledger-total { color: var(--success); }
+    .profit.negative .ledger-label, .profit.negative .ledger-total { color: var(--danger); }
+
+    .ledger-total-row { display: flex; align-items: baseline; gap: 0.15rem; }
+    .ledger-total { font-size: 1.65rem; font-weight: 800; line-height: 1; }
+    .ledger-unit-yen { font-size: 0.78rem; font-weight: 700; }
+
+    .ledger-sub-row {
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 0.76rem; font-weight: 700; color: var(--text-secondary);
+        border-top: 1px dashed var(--border-strong);
+        padding-top: 0.5rem; margin-top: 0.55rem;
+    }
+    .ledger-sub-row .mono { color: var(--text-primary); font-weight: 700; }
+
+    .status-badge { font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 999px; }
+    .status-badge.positive { background: var(--success); color: #fff; }
+    .status-badge.negative { background: var(--danger); color: #fff; }
+
+    .details-toggle {
+        width: 100%;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        background: var(--text-primary);
+        color: #fff;
+        border: none;
+        border-radius: var(--radius-md);
+        font-family: var(--font-body);
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+    .details-toggle:hover { background: #29354a; }
+    .details-toggle:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+    .toggle-chevron { transition: transform 0.25s ease; }
+    .toggle-chevron.open { transform: rotate(180deg); }
+
+    #inline-details { transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease; overflow: hidden; }
+    .hidden-details { max-height: 0; opacity: 0; }
+    .show-details { max-height: 2400px; opacity: 1; margin-top: 0.9rem; }
+
+    .detail-row {
+        display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem;
+        padding: 0.6rem 0; border-bottom: 1px dashed var(--border-strong);
+        font-size: 0.78rem;
+    }
+    .detail-row:last-of-type { border-bottom: none; }
+    .detail-tag { font-size: 0.63rem; font-weight: 700; padding: 0.05rem 0.4rem; border-radius: 0.3rem; background: var(--surface-muted); color: var(--text-secondary); margin-right: 0.3rem; }
+    .detail-label { color: var(--text-primary); font-weight: 600; }
+    .detail-sub { font-size: 0.68rem; color: var(--text-tertiary); margin-top: 0.15rem; }
+    .detail-price { white-space: nowrap; color: var(--text-primary); font-weight: 700; }
+    .detail-total-row { display: flex; justify-content: space-between; align-items: center; padding-top: 0.7rem; margin-top: 0.3rem; border-top: 2px solid var(--text-primary); font-weight: 800; font-size: 0.85rem; }
+
+    .note-card { background: var(--surface-muted); border: 1px dashed var(--border-strong); }
+    .note-card p { margin: 0; }
+
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: var(--surface-muted); }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+    <header class="app-header">
+        <div>
+            <p class="app-eyebrow">Print Estimate Ledger</p>
+            <h1 class="app-title">オリスタ見積りシミュレーター</h1>
+        </div>
+        <div class="app-date mono" id="date-display"></div>
+    </header>
+
+    <div class="layout">
+
+        <!-- 左カラム：共通設定 -->
+        <div class="col">
+            <div class="card">
+                <div class="card-head">
+                    <h2 class="card-title">基本情報</h2>
+                    <span class="card-sub">Base</span>
+                </div>
+
+                <div class="field">
+                    <div class="field-label-row">
+                        <label class="field-label" for="global-qty">発注枚数</label>
+                        <span class="field-unit">枚</span>
+                    </div>
+                    <div class="stepper" data-stepper-for="global-qty">
+                        <button type="button" class="stepper-btn" data-dir="dec" aria-label="発注枚数を減らす">−</button>
+                        <input type="number" id="global-qty" value="" placeholder="例: 30" min="0" step="1" inputmode="numeric">
+                        <button type="button" class="stepper-btn" data-dir="inc" aria-label="発注枚数を増やす">＋</button>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="field-label-row">
+                        <label class="field-label" for="global-body-cost">ボディ原価</label>
+                        <span class="field-unit">円</span>
+                    </div>
+                    <div class="stepper" data-stepper-for="global-body-cost">
+                        <button type="button" class="stepper-btn" data-dir="dec" aria-label="ボディ原価を減らす">−</button>
+                        <input type="number" id="global-body-cost" value="" placeholder="例: 500" min="0" step="10" inputmode="numeric">
+                        <button type="button" class="stepper-btn" data-dir="inc" aria-label="ボディ原価を増やす">＋</button>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="field-label-row">
+                        <label class="field-label" for="global-sale-price" style="color:var(--accent);">販売単価 (税抜)</label>
+                        <span class="field-unit" style="color:var(--accent);">円</span>
+                    </div>
+                    <div class="stepper" data-stepper-for="global-sale-price">
+                        <button type="button" class="stepper-btn" data-dir="dec" aria-label="販売単価を減らす">−</button>
+                        <input type="number" id="global-sale-price" placeholder="未入力" min="0" step="10" inputmode="numeric" class="accent">
+                        <button type="button" class="stepper-btn" data-dir="inc" aria-label="販売単価を増やす">＋</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 共通オプション -->
+            <div class="card">
+                <div class="card-head">
+                    <h2 class="card-title">共通オプション</h2>
+                    <span class="card-sub">Options</span>
+                </div>
+
+                <div class="field">
+                    <label class="field-label">特急料金</label>
+                    <div class="seg-group" data-cols="2" role="group" aria-label="特急料金">
+                        <button type="button" class="seg-btn seg-active" data-group="express" data-value="0">なし</button>
+                        <button type="button" class="seg-btn" data-group="express" data-value="1">あり</button>
+                    </div>
+                    <p class="field-hint">※金額はプリント方法により自動判定されます（シルクのみ: +100円/枚、DTFを含む: +200円/枚）。シルク・DTFのどちらも未選択の場合は課金されません。</p>
+                </div>
+
+                <div class="field">
+                    <label class="field-label">袋入れ</label>
+                    <div class="seg-group" data-cols="2" role="group" aria-label="袋入れ">
+                        <button type="button" class="seg-btn" data-group="bag" data-value="0">なし</button>
+                        <button type="button" class="seg-btn seg-active" data-group="bag" data-value="50">あり<span class="seg-price">50円</span></button>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="field-label">タグカット</label>
+                    <div class="seg-group" data-cols="2" role="group" aria-label="タグカット">
+                        <button type="button" class="seg-btn" data-group="tagCut" data-value="0">なし</button>
+                        <button type="button" class="seg-btn seg-active" data-group="tagCut" data-value="20">あり<span class="seg-price">20円</span></button>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="field-label">タグ付け</label>
+                    <div class="seg-group" data-cols="3" role="group" aria-label="タグ付け">
+                        <button type="button" class="seg-btn seg-active" data-group="tagAttach" data-value="0">なし</button>
+                        <button type="button" class="seg-btn" data-group="tagAttach" data-value="40">襟元<span class="seg-price">40円</span></button>
+                        <button type="button" class="seg-btn" data-group="tagAttach" data-value="60">挟込<span class="seg-price">60円</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中央カラム：詳細設定 -->
+        <div class="col">
+
+            <!-- シルクスクリーン -->
+            <div id="card-silk" class="card process-card inactive">
+                <label class="process-toggle">
+                    <span>
+                        <span class="process-name">シルクスクリーンプリント</span>
+                        <span class="process-name-sub">Silk Screen Print</span>
+                    </span>
+                    <input type="checkbox" id="use-silk">
+                    <span class="switch-track"><span class="switch-thumb"></span></span>
+                </label>
+
+                <div class="content-area">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.1rem;">
+                        <div class="field" style="margin:0;">
+                            <label class="field-label" for="silk-colors">プリント色数</label>
+                            <div class="stepper" data-stepper-for="silk-colors">
+                                <button type="button" class="stepper-btn" data-dir="dec" aria-label="色数を減らす">−</button>
+                                <input type="number" id="silk-colors" value="1" min="1" max="10" step="1" inputmode="numeric">
+                                <button type="button" class="stepper-btn" data-dir="inc" aria-label="色数を増やす">＋</button>
+                            </div>
+                            <p class="field-hint">1〜10色</p>
+                        </div>
+                        <div class="field" style="margin:0;">
+                            <label class="field-label">版の種類</label>
+                            <div class="seg-group" data-cols="2" role="group" aria-label="版の種類" style="height: 44px;">
+                                <button type="button" class="seg-btn seg-active" data-group="plateType" data-value="5800">通常版<span class="seg-price">5,800円</span></button>
+                                <button type="button" class="seg-btn" data-group="plateType" data-value="3800">使い捨て版<span class="seg-price">3,800円</span></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label class="field-label">追加オプション</label>
+                        <div class="chip-row">
+                            <button type="button" class="chip-btn" data-toggle="silkColorChange"><span class="chip-dot"></span>色替え (+1,000円)</button>
+                            <button type="button" class="chip-btn" data-toggle="silkGold"><span class="chip-dot"></span>金・銀インク (+100円/枚)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DTF -->
+            <div id="card-dtf" class="card process-card inactive">
+                <label class="process-toggle">
+                    <span>
+                        <span class="process-name">DTFプリント</span>
+                        <span class="process-name-sub">Direct to Film</span>
+                    </span>
+                    <input type="checkbox" id="use-dtf">
+                    <span class="switch-track"><span class="switch-thumb"></span></span>
+                </label>
+
+                <div class="content-area">
+                    <div class="loc-box">
+                        <label class="field-label" style="display:block; margin-bottom:0.6rem;">1ヶ所目 サイズ選択</label>
+                        <div class="seg-group" data-cols="5" role="group" aria-label="1ヶ所目サイズ">
+                            <button type="button" class="seg-btn seg-active" data-group="dtfSize1" data-value="none">なし</button>
+                            <button type="button" class="seg-btn" data-group="dtfSize1" data-value="9x9">9×9cm</button>
+                            <button type="button" class="seg-btn" data-group="dtfSize1" data-value="28x10">28×10cm</button>
+                            <button type="button" class="seg-btn" data-group="dtfSize1" data-value="28x20">28×20cm</button>
+                            <button type="button" class="seg-btn" data-group="dtfSize1" data-value="36x25">36×25cm</button>
+                        </div>
+                    </div>
+                    <div class="loc-box">
+                        <label class="field-label" style="display:block; margin-bottom:0.6rem;">2ヶ所目 サイズ選択</label>
+                        <div class="seg-group" data-cols="5" role="group" aria-label="2ヶ所目サイズ">
+                            <button type="button" class="seg-btn seg-active" data-group="dtfSize2" data-value="none">なし</button>
+                            <button type="button" class="seg-btn" data-group="dtfSize2" data-value="9x9">9×9cm</button>
+                            <button type="button" class="seg-btn" data-group="dtfSize2" data-value="28x10">28×10cm</button>
+                            <button type="button" class="seg-btn" data-group="dtfSize2" data-value="28x20">28×20cm</button>
+                            <button type="button" class="seg-btn" data-group="dtfSize2" data-value="36x25">36×25cm</button>
+                        </div>
+                    </div>
+
+                    <p id="dtf-warning" class="warn-note hidden">
+                        <span class="warn-badge">!</span>
+                        <span>サイズが選択されていないため、DTF加工費は0円です。1ヶ所目・2ヶ所目のいずれかでサイズを選択してください。</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- 備考・注意書き -->
+            <div class="card note-card">
+                <h4 class="card-sub" style="margin:0 0 0.5rem;">各自計算項目</h4>
+                <p class="field-hint" style="font-size:0.78rem;">
+                    インクジェットプリント、ラバー転写、ネーム刺繍、オリジナル刺繍・ワッペン製作、キャップ刺繍は各自で計算して下さい。
+                </p>
+            </div>
+        </div>
+
+        <!-- 右カラム：計算結果 -->
+        <div class="col">
+            <div id="results-card" class="card ledger" style="padding:0;">
+                <div class="ledger-head">
+                    <span class="card-sub">Estimate Summary</span>
+                    <h2 class="card-title">見積り結果</h2>
+                </div>
+
+                <div class="ledger-body">
+                    <div class="ledger-block sale">
+                        <span class="ledger-label">売上合計 (税抜)</span>
+                        <div class="ledger-total-row"><span class="ledger-total mono" id="res-sale-total">0</span><span class="ledger-unit-yen">円</span></div>
+                        <div class="ledger-sub-row"><span>売上単価</span><span class="mono" id="res-sale-unit">0円</span></div>
+                        <div class="ledger-sub-row"><span>消費税(10%)</span><span class="mono" id="res-tax-amount">0円</span></div>
+                        <div class="ledger-sub-row" style="font-size:0.85rem;"><span style="font-weight:800;">税込合計</span><span class="mono" id="res-sale-tax-included" style="font-weight:800;">0円</span></div>
+                    </div>
+
+                    <div class="ledger-block cost">
+                        <span class="ledger-label">原価合計</span>
+                        <div class="ledger-total-row"><span class="ledger-total mono" id="res-cost-total">0</span><span class="ledger-unit-yen">円</span></div>
+                        <div class="ledger-sub-row"><span>原価単価</span><span class="mono" id="res-cost-unit">0円</span></div>
+                    </div>
+
+                    <div class="ledger-block profit" id="profit-block">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="ledger-label" style="margin-bottom:0;">粗利合計</span>
+                            <span class="status-badge" id="profit-status-badge" style="display:none;"></span>
+                        </div>
+                        <div class="ledger-total-row"><span class="ledger-total mono" id="res-profit-total">0</span><span class="ledger-unit-yen">円</span></div>
+                        <div class="ledger-sub-row"><span>粗利単価</span><span class="mono" id="res-profit-unit">0円</span></div>
+                        <div class="ledger-sub-row"><span>粗利率</span><span class="mono" id="res-profit-margin">—</span></div>
+                        <p id="profit-margin-note" class="field-hint hidden" style="margin-top:0.4rem;">※ 販売単価を入力すると粗利率が表示されます。</p>
+                    </div>
+
+                    <button id="toggle-details-btn" class="details-toggle" onclick="toggleInlineDetails()">
+                        <span id="btn-text">詳細な内訳を表示</span>
+                        <span class="toggle-chevron" id="btn-chevron">▾</span>
+                    </button>
+
+                    <div id="inline-details" class="hidden-details">
+                        <div id="inline-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('date-display').innerText = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+    const PRICES = {
+        silk: [
+            { min: 1, max: 9, p1: 200, pPlus: 200 },
+            { min: 10, max: 49, p1: 150, pPlus: 110 },
+            { min: 50, max: 99, p1: 120, pPlus: 90 },
+            { min: 100, max: 499, p1: 100, pPlus: 80 },
+            { min: 500, max: 99999, p1: 90, pPlus: 70 }
+        ],
+        dtf: {
+            "9x9":   [ { min: 1, max: 10, p: 600 }, { min: 11, max: 100, p: 380 }, { min: 101, max: 9999, p: 330 } ],
+            "28x10": [ { min: 1, max: 10, p: 800 }, { min: 11, max: 100, p: 580 }, { min: 101, max: 9999, p: 530 } ],
+            "28x20": [ { min: 1, max: 10, p: 1000 }, { min: 11, max: 100, p: 800 }, { min: 101, max: 9999, p: 750 } ],
+            "36x25": [ { min: 1, max: 10, p: 1400 }, { min: 11, max: 100, p: 1000 }, { min: 101, max: 9999, p: 950 } ]
+        }
+    };
+
+    // セレクトボックスに代わる状態管理(ボタン群のON/OFF状態をここに集約する)
+    const state = {
+        express: 0,
+        bag: 50,
+        tagCut: 20,
+        tagAttach: 0,
+        plateType: 5800,
+        dtfSize1: 'none',
+        dtfSize2: 'none',
+        silkColorChange: false,
+        silkGold: false
+    };
+
+    let calculatedDetails = [];
+    let isDetailsOpen = false;
+
+    // 数値を安全にパースし、min/maxの範囲にclampして返す共通ヘルパー。
+    // 不正値・空値はfallbackを返す。実際の計算には常にこの関数の戻り値を使う。
+    function getClampedInt(id, { min = null, max = null, fallback = 0 } = {}) {
+        const raw = document.getElementById(id).value;
+        let v = parseInt(raw, 10);
+        if (isNaN(v)) v = fallback;
+        if (min !== null) v = Math.max(min, v);
+        if (max !== null) v = Math.min(max, v);
+        return v;
+    }
+
+    // blur時に、画面上の入力値そのものをclamp後の値へ補正して見た目にも反映する。
+    function correctFieldOnBlur(id, opts) {
+        const el = document.getElementById(id);
+        if (el.value === '') return; // 未入力はそのまま(placeholder運用のため)
+        const clamped = getClampedInt(id, opts);
+        if (String(clamped) !== el.value) el.value = clamped;
+    }
+
+    function toggleInlineDetails() {
+        const area = document.getElementById('inline-details');
+        const btnText = document.getElementById('btn-text');
+        const chevron = document.getElementById('btn-chevron');
+        isDetailsOpen = !isDetailsOpen;
+        if (isDetailsOpen) {
+            renderInlineContent();
+            area.classList.remove('hidden-details');
+            area.classList.add('show-details');
+            btnText.innerText = "詳細を隠す";
+            chevron.classList.add('open');
+        } else {
+            area.classList.remove('show-details');
+            area.classList.add('hidden-details');
+            btnText.innerText = "詳細な内訳を表示";
+            chevron.classList.remove('open');
+        }
+    }
+
+    function updateUI() {
+        ['silk', 'dtf'].forEach(cat => {
+            const checkbox = document.getElementById(`use-${cat}`);
+            const card = document.getElementById(`card-${cat}`);
+            if (checkbox.checked) {
+                card.classList.add('active');
+                card.classList.remove('inactive');
+            } else {
+                card.classList.add('inactive');
+                card.classList.remove('active');
+                card.classList.remove('warn');
+            }
+        });
+        calculate();
+    }
+
+    function calculate() {
+        const qty = getClampedInt('global-qty', { min: 0, fallback: 0 });
+        const bodyCost = getClampedInt('global-body-cost', { min: 0, fallback: 0 });
+        const saleUnit = getClampedInt('global-sale-price', { min: 0, fallback: 0 });
+
+        calculatedDetails = [];
+        if (qty <= 0) { resetResultUI(); return; }
+
+        calculatedDetails.push({ category: '共通', label: 'ボディ本体原価', price: bodyCost * qty, detail: `${bodyCost.toLocaleString()}円 × ${qty}枚` });
+        let totalCost = bodyCost * qty;
+
+        const isSilkActive = document.getElementById('use-silk').checked;
+        const isDtfActive = document.getElementById('use-dtf').checked;
+
+        if (isSilkActive) {
+            const colors = getClampedInt('silk-colors', { min: 1, max: 10, fallback: 1 });
+            const platePrice = state.plateType;
+            const tier = PRICES.silk.find(t => qty >= t.min && qty <= t.max) || PRICES.silk[PRICES.silk.length - 1];
+
+            const p1Price = tier.p1 * qty;
+            calculatedDetails.push({ category: 'シルク', label: 'プリント1色目', price: p1Price, detail: `${tier.p1.toLocaleString()}円 × ${qty}枚` });
+            totalCost += p1Price;
+
+            if (colors > 1) {
+                const extraColors = colors - 1;
+                const pExtraPrice = (tier.pPlus * extraColors) * qty;
+                calculatedDetails.push({ category: 'シルク', label: `追加プリント(${extraColors}色分)`, price: pExtraPrice, detail: `${tier.pPlus.toLocaleString()}円 × ${extraColors}色 × ${qty}枚` });
+                totalCost += pExtraPrice;
+            }
+
+            const plateFee = platePrice * colors;
+            calculatedDetails.push({ category: 'シルク', label: '版代合計', price: plateFee, detail: `${platePrice.toLocaleString()}円 × ${colors}版` });
+            totalCost += plateFee;
+
+            if (state.silkColorChange) {
+                totalCost += 1000;
+                calculatedDetails.push({ category: 'シルク', label: '色替え代', price: 1000, detail: '1,000円 × 1回' });
+            }
+            if (state.silkGold) {
+                totalCost += (100 * qty);
+                calculatedDetails.push({ category: 'シルク', label: '金・銀割増', price: 100 * qty, detail: '100円 × ' + qty + '枚' });
+            }
+        }
+
+        let dtfHasSize = false;
+        if (isDtfActive) {
+            [state.dtfSize1, state.dtfSize2].forEach((sz, i) => {
+                if (sz !== 'none') {
+                    dtfHasSize = true;
+                    const tier = PRICES.dtf[sz].find(t => qty >= t.min && qty <= t.max) || PRICES.dtf[sz][PRICES.dtf[sz].length - 1];
+                    totalCost += (tier.p * qty);
+                    calculatedDetails.push({ category: 'DTF', label: `${i + 1}ヶ所目加工費(${sz})`, price: tier.p * qty, detail: `${tier.p.toLocaleString()}円 × ${qty}枚` });
+                }
+            });
+        }
+
+        // DTF有効だがサイズ未選択の場合は警告を表示し、カードの枠色を注意喚起色にする
+        const dtfWarningEl = document.getElementById('dtf-warning');
+        const dtfCard = document.getElementById('card-dtf');
+        if (isDtfActive && !dtfHasSize) {
+            dtfWarningEl.classList.remove('hidden');
+            dtfCard.classList.add('warn');
+        } else {
+            dtfWarningEl.classList.add('hidden');
+            dtfCard.classList.remove('warn');
+        }
+
+        // 特急料金: シルク・DTFのいずれかが有効な場合のみ課金する。
+        // どちらも未選択の状態で「あり」にしても課金対象がないため0円のまま。
+        if (state.express > 0 && (isSilkActive || isDtfActive)) {
+            const isSilkOnly = isSilkActive && !isDtfActive;
+            const actualExpress = isSilkOnly ? 100 : 200;
+            totalCost += (actualExpress * qty);
+            calculatedDetails.push({ category: '共通', label: '特急料金', price: actualExpress * qty, detail: `${actualExpress.toLocaleString()}円 × ${qty}枚` });
+        }
+
+        if (state.bag > 0) {
+            totalCost += (state.bag * qty);
+            calculatedDetails.push({ category: '共通', label: '袋入れ代', price: state.bag * qty, detail: `${state.bag.toLocaleString()}円 × ${qty}枚` });
+        }
+
+        if (state.tagCut > 0) {
+            totalCost += (state.tagCut * qty);
+            calculatedDetails.push({ category: '共通', label: 'タグカット代', price: state.tagCut * qty, detail: `${state.tagCut.toLocaleString()}円 × ${qty}枚` });
+        }
+
+        if (state.tagAttach > 0) {
+            totalCost += (state.tagAttach * qty);
+            calculatedDetails.push({ category: '共通', label: 'タグ付け代', price: state.tagAttach * qty, detail: `${state.tagAttach.toLocaleString()}円 × ${qty}枚` });
+        }
+
+        const totalSale = saleUnit * qty;
+        const costUnit = totalCost / qty;
+        const profitTotal = totalSale - totalCost;
+        const profitUnit = profitTotal / qty;
+        const hasSalePrice = saleUnit > 0;
+        const profitMargin = hasSalePrice ? (profitTotal / totalSale) * 100 : 0;
+        const tax = Math.floor(totalSale * 0.1);
+
+        document.getElementById('res-sale-unit').innerText = saleUnit.toLocaleString() + '円';
+        document.getElementById('res-sale-total').innerText = totalSale.toLocaleString();
+        document.getElementById('res-cost-unit').innerText = Math.round(costUnit).toLocaleString() + '円';
+        document.getElementById('res-cost-total').innerText = Math.round(totalCost).toLocaleString();
+        document.getElementById('res-profit-unit').innerText = Math.round(profitUnit).toLocaleString() + '円';
+        document.getElementById('res-profit-total').innerText = Math.round(profitTotal).toLocaleString();
+        document.getElementById('res-tax-amount').innerText = `${tax.toLocaleString()}円`;
+        document.getElementById('res-sale-tax-included').innerText = (totalSale + tax).toLocaleString() + '円';
+
+        const marginEl = document.getElementById('res-profit-margin');
+        const marginNoteEl = document.getElementById('profit-margin-note');
+        if (hasSalePrice) {
+            marginEl.innerText = `${profitMargin.toFixed(1)}%`;
+            marginNoteEl.classList.add('hidden');
+        } else {
+            marginEl.innerText = '—';
+            marginNoteEl.classList.remove('hidden');
+        }
+
+        const profitBlockEl = document.getElementById('profit-block');
+        const badgeEl = document.getElementById('profit-status-badge');
+        if (!hasSalePrice) {
+            profitBlockEl.classList.remove('negative');
+            badgeEl.style.display = 'none';
+        } else if (profitTotal < 0) {
+            profitBlockEl.classList.add('negative');
+            badgeEl.style.display = 'inline-block';
+            badgeEl.innerText = '赤字';
+            badgeEl.className = 'status-badge negative';
+        } else {
+            profitBlockEl.classList.remove('negative');
+            badgeEl.style.display = 'inline-block';
+            badgeEl.innerText = '黒字';
+            badgeEl.className = 'status-badge positive';
+        }
+
+        if (isDetailsOpen) renderInlineContent();
+    }
+
+    function resetResultUI() {
+        document.getElementById('res-sale-unit').innerText = '0円';
+        document.getElementById('res-sale-total').innerText = '0';
+        document.getElementById('res-cost-unit').innerText = '0円';
+        document.getElementById('res-cost-total').innerText = '0';
+        document.getElementById('res-profit-unit').innerText = '0円';
+        document.getElementById('res-profit-total').innerText = '0';
+        document.getElementById('res-tax-amount').innerText = '0円';
+        document.getElementById('res-sale-tax-included').innerText = '0円';
+        document.getElementById('res-profit-margin').innerText = '—';
+        document.getElementById('profit-margin-note').classList.add('hidden');
+        document.getElementById('profit-status-badge').style.display = 'none';
+        document.getElementById('profit-block').classList.remove('negative');
+        document.getElementById('dtf-warning').classList.add('hidden');
+        document.getElementById('card-dtf').classList.remove('warn');
+        document.getElementById('inline-content').innerHTML = '';
+    }
+
+    function renderInlineContent() {
+        const container = document.getElementById('inline-content');
+        if (calculatedDetails.length === 0) { container.innerHTML = '<div style="text-align:center; color:var(--text-tertiary); padding:1rem 0;">条件を入力してください。</div>'; return; }
+        let html = '';
+        let total = 0;
+        calculatedDetails.forEach(item => {
+            total += item.price;
+            html += `
+                <div class="detail-row">
+                    <div>
+                        <span class="detail-tag">${item.category}</span>
+                        <span class="detail-label">${item.label}</span>
+                        <div class="detail-sub">${item.detail}</div>
+                    </div>
+                    <div class="detail-price mono">${item.price.toLocaleString()}円</div>
+                </div>
+            `;
+        });
+        html += `<div class="detail-total-row"><span>原価合計(加工費込)</span><span class="mono">${total.toLocaleString()}円</span></div>`;
+        container.innerHTML = html;
+    }
+
+    // ---- セグメントボタン(選択肢グループ) の共通制御 ----
+    function initSegGroups() {
+        document.querySelectorAll('[data-group]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const group = btn.dataset.group;
+                const raw = btn.dataset.value;
+                const value = isNaN(Number(raw)) ? raw : Number(raw);
+                state[group] = value;
+                document.querySelectorAll(`[data-group="${group}"]`).forEach(b => {
+                    b.classList.toggle('seg-active', b === btn);
+                });
+                calculate();
+            });
+        });
+    }
+
+    // ---- トグルチップ(色替え・金銀インク等) の共通制御 ----
+    function initToggleChips() {
+        document.querySelectorAll('[data-toggle]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.toggle;
+                state[key] = !state[key];
+                btn.classList.toggle('chip-active', state[key]);
+                calculate();
+            });
+        });
+    }
+
+    // ---- 数値ステッパー(+/-ボタン) の共通制御 ----
+    function initSteppers() {
+        document.querySelectorAll('[data-stepper-for]').forEach(wrap => {
+            const inputId = wrap.dataset.stepperFor;
+            const input = document.getElementById(inputId);
+            const min = input.min !== '' ? parseInt(input.min, 10) : null;
+            const max = input.max !== '' ? parseInt(input.max, 10) : null;
+            const step = input.step ? parseInt(input.step, 10) || 1 : 1;
+            wrap.querySelectorAll('.stepper-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const dir = btn.dataset.dir === 'inc' ? 1 : -1;
+                    let cur = parseInt(input.value, 10);
+                    if (isNaN(cur)) cur = (min !== null ? min : 0);
+                    let next = cur + dir * step;
+                    if (min !== null) next = Math.max(min, next);
+                    if (max !== null) next = Math.min(max, next);
+                    input.value = next;
+                    calculate();
+                });
+            });
+        });
+    }
+
+    function bindEvents() {
+        document.getElementById('use-silk').addEventListener('change', updateUI);
+        document.getElementById('use-dtf').addEventListener('change', updateUI);
+
+        document.querySelectorAll('input[type="number"]').forEach(el => {
+            el.addEventListener('input', calculate);
+        });
+        document.getElementById('global-body-cost').addEventListener('blur', () => correctFieldOnBlur('global-body-cost', { min: 0, fallback: 0 }));
+        document.getElementById('global-sale-price').addEventListener('blur', () => correctFieldOnBlur('global-sale-price', { min: 0, fallback: 0 }));
+        document.getElementById('global-qty').addEventListener('blur', () => correctFieldOnBlur('global-qty', { min: 0, fallback: 0 }));
+        document.getElementById('silk-colors').addEventListener('blur', () => correctFieldOnBlur('silk-colors', { min: 1, max: 10, fallback: 1 }));
+
+        initSegGroups();
+        initToggleChips();
+        initSteppers();
+    }
+
+    bindEvents();
+    updateUI();
+</script>
+</body>
+</html>
