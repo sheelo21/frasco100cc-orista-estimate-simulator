@@ -201,6 +201,23 @@
     }
     .seg-btn.seg-active .seg-price { opacity: 0.9; }
 
+    /* ---- プルダウン ---- */
+    .select-input {
+        width: 100%;
+        min-height: 44px;
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: 0.4rem 0.6rem;
+        cursor: pointer;
+    }
+    .select-input:hover { border-color: var(--accent); }
+    .select-input:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 1px; }
+
     /* ---- トグルチップ(オプションON/OFF) ---- */
     .chip-row { display: flex; flex-wrap: wrap; gap: 0.6rem; }
     .chip-btn {
@@ -480,12 +497,26 @@
                 </div>
 
                 <div class="field">
-                    <label class="field-label">タグ付け</label>
-                    <div class="seg-group" data-cols="3" role="group" aria-label="タグ付け">
-                        <button type="button" class="seg-btn seg-active" data-group="tagAttach" data-value="0">なし</button>
-                        <button type="button" class="seg-btn" data-group="tagAttach" data-value="40">襟元<span class="seg-price">40円</span></button>
-                        <button type="button" class="seg-btn" data-group="tagAttach" data-value="60">挟込<span class="seg-price">60円</span></button>
-                    </div>
+                    <label class="field-label" for="tag-attach-1">タグ付け 1箇所目</label>
+                    <select id="tag-attach-1" class="select-input" data-state="tagAttach1">
+                        <option value="none" selected>なし</option>
+                        <option value="normal">通常（40円）</option>
+                        <option value="insert">挟み込み（60円）</option>
+                        <option value="sew2">襟・2枚重ね縫い付け（80円）</option>
+                        <option value="sew3">襟・3枚重ね縫い付け（120円）</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label class="field-label" for="tag-attach-2">タグ付け 2箇所目</label>
+                    <select id="tag-attach-2" class="select-input" data-state="tagAttach2">
+                        <option value="none" selected>なし</option>
+                        <option value="normal">通常（40円）</option>
+                        <option value="insert">挟み込み（60円）</option>
+                        <option value="sew2">襟・2枚重ね縫い付け（80円）</option>
+                        <option value="sew3">襟・3枚重ね縫い付け（120円）</option>
+                    </select>
+                    <p class="field-hint">縫い付けは、仕上がりがきれいにならない場合があります。</p>
                 </div>
             </div>
         </div>
@@ -516,20 +547,33 @@
                             <p class="field-hint">1〜10色</p>
                         </div>
                         <div class="field" style="margin:0;">
-                            <label class="field-label">版の種類</label>
-                            <div class="seg-group" data-cols="2" role="group" aria-label="版の種類" style="height: 44px;">
-                                <button type="button" class="seg-btn seg-active" data-group="plateType" data-value="5800">通常版<span class="seg-price">5,800円</span></button>
-                                <button type="button" class="seg-btn" data-group="plateType" data-value="3800">使い捨て版<span class="seg-price">3,800円</span></button>
-                            </div>
+                            <label class="field-label" for="silk-color-change">色替え (1,000円/回)</label>
+                            <select id="silk-color-change" class="select-input" data-state="silkColorChange">
+                                <option value="0" selected>なし</option>
+                                <option value="1">1回</option>
+                                <option value="2">2回</option>
+                                <option value="3">3回</option>
+                            </select>
+                            <p class="field-hint">同じデザインでもボディによってプリント色が異なる場合に発生します。</p>
                         </div>
+                    </div>
+
+                    <div class="field">
+                        <label class="field-label">版の種類</label>
+                        <div class="seg-group" data-cols="3" role="group" aria-label="版の種類">
+                            <button type="button" class="seg-btn seg-active" data-group="plateType" data-value="normal">通常版<span class="seg-price">5,800円/色</span></button>
+                            <button type="button" class="seg-btn" data-group="plateType" data-value="xl">特大版<span class="seg-price">7,800円/色</span></button>
+                            <button type="button" class="seg-btn" data-group="plateType" data-value="disposable">使い捨て版<span class="seg-price">3,800円/色</span></button>
+                        </div>
+                        <p class="field-hint">通常版は W36cm×40cm まで。特大版は横32.8cm×縦48.3cm程度で、加工代に +100円/色/枚 が加算されます。</p>
                     </div>
 
                     <div class="field">
                         <label class="field-label">追加オプション</label>
                         <div class="chip-row">
-                            <button type="button" class="chip-btn" data-toggle="silkColorChange"><span class="chip-dot"></span>色替え (+1,000円)</button>
                             <button type="button" class="chip-btn" data-toggle="silkGold"><span class="chip-dot"></span>金・銀インク (+100円/枚)</button>
                         </div>
+                        <p class="field-hint">※金・銀などの特色は、通常カラーとは別の専用版が必要です（特色専用の版では通常カラーはプリントできません）。この「金・銀インク」は特色1色分として+100円/枚で計算しています。特色が2色以上ある場合は、1色増えるごとに+100円/枚を各自で加算してください。追加注文で通常カラー⇔特色に変更する場合は、新規の版代が発生します。</p>
                     </div>
                 </div>
             </div>
@@ -650,16 +694,33 @@
         }
     };
 
-    // セレクトボックスに代わる状態管理(ボタン群のON/OFF状態をここに集約する)
+    // シルクの版の種類。版代は1色あたり、colorSurcharge は加工代への「1色・1枚あたり」の加算。
+    const PLATE_TYPES = {
+        normal:     { label: '通常版',     price: 5800, colorSurcharge: 0 },
+        xl:         { label: '特大版',     price: 7800, colorSurcharge: 100 },
+        disposable: { label: '使い捨て版', price: 3800, colorSurcharge: 0 }
+    };
+
+    // タグ付け(1枚あたり)の種類
+    const TAG_ATTACH_TYPES = {
+        none:   { label: 'なし', price: 0 },
+        normal: { label: '通常', price: 40 },
+        insert: { label: '挟み込み', price: 60 },
+        sew2:   { label: '襟・2枚重ね縫い付け', price: 80 },
+        sew3:   { label: '襟・3枚重ね縫い付け', price: 120 }
+    };
+
+    // 画面の選択状態(ボタン群・プルダウンの値をここに集約する)
     const state = {
         express: 0,
         bag: 50,
         tagCut: 20,
-        tagAttach: 0,
-        plateType: 5800,
+        tagAttach1: 'none',
+        tagAttach2: 'none',
+        plateType: 'normal',
         dtfSize1: 'none',
         dtfSize2: 'none',
-        silkColorChange: false,
+        silkColorChange: 0,
         silkGold: false
     };
 
@@ -736,7 +797,8 @@
 
         if (isSilkActive) {
             const colors = getClampedInt('silk-colors', { min: 1, max: 10, fallback: 1 });
-            const platePrice = state.plateType;
+            const plate = PLATE_TYPES[state.plateType];
+            const platePrice = plate.price;
             const tier = PRICES.silk.find(t => qty >= t.min && qty <= t.max) || PRICES.silk[PRICES.silk.length - 1];
 
             const p1Price = tier.p1 * qty;
@@ -750,13 +812,20 @@
                 totalCost += pExtraPrice;
             }
 
+            if (plate.colorSurcharge > 0) {
+                const surcharge = plate.colorSurcharge * colors * qty;
+                calculatedDetails.push({ category: 'シルク', label: `${plate.label}割増`, price: surcharge, detail: `${plate.colorSurcharge.toLocaleString()}円 × ${colors}色 × ${qty}枚` });
+                totalCost += surcharge;
+            }
+
             const plateFee = platePrice * colors;
-            calculatedDetails.push({ category: 'シルク', label: '版代合計', price: plateFee, detail: `${platePrice.toLocaleString()}円 × ${colors}版` });
+            calculatedDetails.push({ category: 'シルク', label: `版代合計(${plate.label})`, price: plateFee, detail: `${platePrice.toLocaleString()}円 × ${colors}版` });
             totalCost += plateFee;
 
-            if (state.silkColorChange) {
-                totalCost += 1000;
-                calculatedDetails.push({ category: 'シルク', label: '色替え代', price: 1000, detail: '1,000円 × 1回' });
+            if (state.silkColorChange > 0) {
+                const colorChangeFee = 1000 * state.silkColorChange;
+                totalCost += colorChangeFee;
+                calculatedDetails.push({ category: 'シルク', label: '色替え代', price: colorChangeFee, detail: `1,000円 × ${state.silkColorChange}回` });
             }
             if (state.silkGold) {
                 totalCost += (100 * qty);
@@ -806,10 +875,13 @@
             calculatedDetails.push({ category: '共通', label: 'タグカット代', price: state.tagCut * qty, detail: `${state.tagCut.toLocaleString()}円 × ${qty}枚` });
         }
 
-        if (state.tagAttach > 0) {
-            totalCost += (state.tagAttach * qty);
-            calculatedDetails.push({ category: '共通', label: 'タグ付け代', price: state.tagAttach * qty, detail: `${state.tagAttach.toLocaleString()}円 × ${qty}枚` });
-        }
+        [state.tagAttach1, state.tagAttach2].forEach((key, i) => {
+            const tag = TAG_ATTACH_TYPES[key];
+            if (tag.price > 0) {
+                totalCost += (tag.price * qty);
+                calculatedDetails.push({ category: '共通', label: `タグ付け代(${i + 1}箇所目: ${tag.label})`, price: tag.price * qty, detail: `${tag.price.toLocaleString()}円 × ${qty}枚` });
+            }
+        });
 
         const totalSale = saleUnit * qty;
         const costUnit = totalCost / qty;
@@ -926,6 +998,17 @@
         });
     }
 
+    // ---- プルダウン(色替え回数・タグ付け) の共通制御 ----
+    function initSelects() {
+        document.querySelectorAll('select[data-state]').forEach(sel => {
+            sel.addEventListener('change', () => {
+                const raw = sel.value;
+                state[sel.dataset.state] = isNaN(Number(raw)) ? raw : Number(raw);
+                calculate();
+            });
+        });
+    }
+
     // ---- 数値ステッパー(+/-ボタン) の共通制御 ----
     function initSteppers() {
         document.querySelectorAll('[data-stepper-for]').forEach(wrap => {
@@ -963,6 +1046,7 @@
 
         initSegGroups();
         initToggleChips();
+        initSelects();
         initSteppers();
     }
 
